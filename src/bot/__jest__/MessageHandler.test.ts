@@ -18,60 +18,69 @@ describe('MessageHandler', () => {
 
     describe('when message is from bot', () => {
       const message = ({
-        author: { bot: true }
+        author: { bot: true },
+        hasPrefix: () => true,
+        isDirectMessage: () => false
       } as unknown) as Message;
-      Object.setPrototypeOf(message, Message.prototype);
 
       it('does nothing', () => {
         jest.spyOn(message, 'isDirectMessage');
+
         messageHandler.handle(message);
 
-        expect(commandCollection.execute).not.toHaveBeenCalled();
+        expect(message.author.bot).toBe(true);
         expect(message.isDirectMessage).not.toHaveBeenCalled();
+        expect(commandCollection.execute).not.toHaveBeenCalled();
       });
     });
 
     describe('when message is DM', () => {
-      const channel = ({} as unknown) as DMChannel;
-      Object.setPrototypeOf(channel, DMChannel.prototype);
-
       const message = ({
         author: { bot: false },
-        channel
+        channel: { type: 'dm' },
+        hasPrefix: () => true,
+        isDirectMessage: () => true
       } as unknown) as Message;
-      Object.setPrototypeOf(message, Message.prototype);
 
       it('does nothing', () => {
         jest.spyOn(message, 'hasPrefix');
+
         messageHandler.handle(message);
 
-        expect(commandCollection.execute).not.toHaveBeenCalled();
+        expect(message.isDirectMessage()).toBe(true);
         expect(message.hasPrefix).not.toHaveBeenCalled();
+        expect(commandCollection.execute).not.toHaveBeenCalled();
       });
     });
 
     describe('when message does not have prefix', () => {
       const message = ({
         author: { bot: false },
-        content: `NOT_${PREFIX}`
+        channel: {},
+        content: `NOT_${PREFIX}`,
+        hasPrefix: () => false,
+        isDirectMessage: () => false
       } as unknown) as Message;
-      Object.setPrototypeOf(message, Message.prototype);
 
       it('does nothing', () => {
         jest.spyOn(ignoreList, 'exists');
+
         messageHandler.handle(message);
 
-        expect(commandCollection.execute).not.toHaveBeenCalled();
+        expect(message.hasPrefix(PREFIX)).toBe(false);
         expect(ignoreList.exists).not.toHaveBeenCalled();
+        expect(commandCollection.execute).not.toHaveBeenCalled();
       });
     });
 
     describe('when user is ignored', () => {
       const message = ({
         author: { bot: false },
-        content: PREFIX
+        channel: {},
+        content: PREFIX,
+        hasPrefix: () => true,
+        isDirectMessage: () => false
       } as unknown) as Message;
-      Object.setPrototypeOf(message, Message.prototype);
 
       it('does nothing', () => {
         jest.spyOn(ignoreList, 'exists').mockImplementation(() => true);
@@ -84,9 +93,11 @@ describe('MessageHandler', () => {
     describe('when message is valid', () => {
       const message = ({
         author: { bot: false },
-        content: PREFIX
+        channel: {},
+        content: PREFIX,
+        hasPrefix: () => true,
+        isDirectMessage: () => false
       } as unknown) as Message;
-      Object.setPrototypeOf(message, Message.prototype);
 
       it('executes the command', () => {
         jest.spyOn(ignoreList, 'exists').mockImplementation(() => false);
